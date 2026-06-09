@@ -96,6 +96,33 @@
               <span class="slider"></span>
             </label>
           </div>
+
+          <div class="settings-item">
+            <div class="settings-label-wrapper">
+              <span class="settings-label">Auto-Delete Highlights</span>
+              <span class="settings-desc">Erase highlights after a set period</span>
+            </div>
+            <label class="premium-switch">
+              <input type="checkbox" id="toggle-autodelete">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-item" id="autodelete-duration-container" style="display: none;">
+            <div class="settings-label-wrapper">
+              <span class="settings-label">Expiration Period</span>
+              <span class="settings-desc">Keep highlights for this duration</span>
+            </div>
+            <select id="autodelete-duration" class="premium-select">
+              <option value="never">Never</option>
+              <option value="900000">15 Minutes</option>
+              <option value="3600000">1 Hour</option>
+              <option value="43200000">12 Hours</option>
+              <option value="86400000">24 Hours</option>
+              <option value="604800000">7 Days</option>
+              <option value="2592000000">30 Days</option>
+            </select>
+          </div>
         </div>
 
         <div class="settings-group">

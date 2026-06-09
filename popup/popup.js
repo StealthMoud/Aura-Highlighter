@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toggleToolbar = document.getElementById('toggle-toolbar');
   const toggleAutoHighlight = document.getElementById('toggle-autohighlight');
   const toggleShortcuts = document.getElementById('toggle-shortcuts');
+  const toggleAutodelete = document.getElementById('toggle-autodelete');
+  const autodeleteDuration = document.getElementById('autodelete-duration');
+  const autodeleteDurationContainer = document.getElementById('autodelete-duration-container');
   const colorChoiceBtns = document.querySelectorAll('.color-choice-btn');
 
   // Toggle View Panels
@@ -51,17 +54,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       settings_toolbar_enabled = true,
       settings_auto_highlight = false,
       settings_shortcuts_enabled = true,
-      settings_default_color = 'indigo'
+      settings_default_color = 'indigo',
+      settings_auto_delete_enabled = false,
+      settings_auto_delete_duration = '86400000'
     } = await chrome.storage.local.get([
       'settings_toolbar_enabled',
       'settings_auto_highlight',
       'settings_shortcuts_enabled',
-      'settings_default_color'
+      'settings_default_color',
+      'settings_auto_delete_enabled',
+      'settings_auto_delete_duration'
     ]);
 
     toggleToolbar.checked = settings_toolbar_enabled;
     toggleAutoHighlight.checked = settings_auto_highlight;
     toggleShortcuts.checked = settings_shortcuts_enabled;
+    toggleAutodelete.checked = settings_auto_delete_enabled;
+    autodeleteDuration.value = settings_auto_delete_duration;
+
+    if (settings_auto_delete_enabled) {
+      autodeleteDurationContainer.style.display = 'flex';
+    } else {
+      autodeleteDurationContainer.style.display = 'none';
+    }
 
     colorChoiceBtns.forEach(btn => {
       if (btn.getAttribute('data-color') === settings_default_color) {
@@ -83,6 +98,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   toggleShortcuts.addEventListener('change', async () => {
     await chrome.storage.local.set({ settings_shortcuts_enabled: toggleShortcuts.checked });
+  });
+
+  toggleAutodelete.addEventListener('change', async () => {
+    const enabled = toggleAutodelete.checked;
+    await chrome.storage.local.set({ settings_auto_delete_enabled: enabled });
+    if (enabled) {
+      if (autodeleteDuration.value === 'never') {
+        autodeleteDuration.value = '86400000';
+        await chrome.storage.local.set({ settings_auto_delete_duration: '86400000' });
+      }
+      autodeleteDurationContainer.style.display = 'flex';
+    } else {
+      autodeleteDurationContainer.style.display = 'none';
+    }
+    try {
+      await chrome.runtime.sendMessage({ action: "cleanup-expired" });
+    } catch (err) {}
+  });
+
+  autodeleteDuration.addEventListener('change', async () => {
+    const value = autodeleteDuration.value;
+    if (value === 'never') {
+      toggleAutodelete.checked = false;
+      autodeleteDurationContainer.style.display = 'none';
+      await chrome.storage.local.set({
+        settings_auto_delete_enabled: false,
+        settings_auto_delete_duration: 'never'
+      });
+    } else {
+      await chrome.storage.local.set({ settings_auto_delete_duration: value });
+    }
+    try {
+      await chrome.runtime.sendMessage({ action: "cleanup-expired" });
+    } catch (err) {}
   });
 
   colorChoiceBtns.forEach(btn => {
@@ -360,6 +409,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Init
+  try {
+    await chrome.runtime.sendMessage({ action: "cleanup-expired" });
+  } catch (err) {}
   await loadAndRender();
   await loadSettings();
 });

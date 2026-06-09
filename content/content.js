@@ -50,12 +50,18 @@ chrome.storage.onChanged.addListener((changes) => {
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", async () => {
     await loadConfig();
+    try {
+      await chrome.runtime.sendMessage({ action: "cleanup-expired" });
+    } catch (err) {}
     restorePageHighlights();
     checkAndScrollToHash();
   });
 } else {
   (async () => {
     await loadConfig();
+    try {
+      await chrome.runtime.sendMessage({ action: "cleanup-expired" });
+    } catch (err) {}
     restorePageHighlights();
     checkAndScrollToHash();
   })();

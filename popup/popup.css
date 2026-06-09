@@ -718,3 +718,40 @@ body {
   box-shadow: 0 0 6px var(--primary-glow);
   text-shadow: 0 0 4px var(--primary-glow);
 }
+
+/* Premium Select Box */
+.premium-select {
+  background: hsla(245, 80%, 62%, 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  color: var(--text-main);
+  padding: 6px 12px;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--transition-slow) var(--spring-curve);
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='hsl(245, 10%, 65%)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 28px;
+}
+
+.premium-select:hover {
+  background-color: hsla(0, 0%, 100%, 0.08);
+  border-color: var(--border-hover);
+}
+
+.premium-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.premium-select option {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+}
+
