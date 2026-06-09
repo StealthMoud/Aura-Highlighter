@@ -89,11 +89,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Save settings on changes
   toggleToolbar.addEventListener('change', async () => {
-    await chrome.storage.local.set({ settings_toolbar_enabled: toggleToolbar.checked });
+    const toolbarEnabled = toggleToolbar.checked;
+    if (toolbarEnabled) {
+      toggleAutoHighlight.checked = false;
+      await chrome.storage.local.set({
+        settings_toolbar_enabled: true,
+        settings_auto_highlight: false
+      });
+    } else {
+      await chrome.storage.local.set({ settings_toolbar_enabled: false });
+    }
   });
 
   toggleAutoHighlight.addEventListener('change', async () => {
-    await chrome.storage.local.set({ settings_auto_highlight: toggleAutoHighlight.checked });
+    const autoHighlightEnabled = toggleAutoHighlight.checked;
+    if (autoHighlightEnabled) {
+      toggleToolbar.checked = false;
+      await chrome.storage.local.set({
+        settings_auto_highlight: true,
+        settings_toolbar_enabled: false
+      });
+    } else {
+      await chrome.storage.local.set({ settings_auto_highlight: false });
+    }
   });
 
   toggleShortcuts.addEventListener('change', async () => {
