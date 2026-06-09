@@ -69,6 +69,51 @@ function checkAndScrollToHash() {
 
 window.addEventListener('hashchange', checkAndScrollToHash);
 
+// Helper to create and save a new highlight from a Range object
+async function createHighlightFromRange(range, color) {
+  const id = 'aura_' + Math.random().toString(36).substr(2, 9);
+  const parentBlock = getClosestBlockParent(range.startContainer);
+  const selector = getUniqueSelector(parentBlock);
+  const startOffset = getTextOffset(parentBlock, range.startContainer, range.startOffset);
+  const endOffset = getTextOffset(parentBlock, range.endContainer, range.endOffset);
+  
+  if (startOffset !== -1 && endOffset !== -1) {
+    const highlight = {
+      id,
+      selector,
+      startOffset,
+      endOffset,
+      color,
+      text: range.toString(),
+      createdAt: Date.now(),
+      pageTitle: document.title || window.location.hostname,
+      url: window.location.href.split('#')[0]
+    };
+    wrapRangeInMarks(range, id, color);
+    await saveHighlight(highlight);
+    return id;
+  }
+  return null;
+}
+
+// Helper to remove the most recent page highlight sequentially
+async function undoLastHighlight() {
+  const url = window.location.href.split('#')[0];
+  try {
+    const { [url]: pageHighlights = [] } = await chrome.storage.local.get(url);
+    if (pageHighlights.length === 0) return;
+    
+    // Sort highlights by creation time descending (most recent first)
+    pageHighlights.sort((a, b) => b.createdAt - a.createdAt);
+    const lastHighlight = pageHighlights[0];
+    
+    removeHighlightFromDOM(lastHighlight.id);
+    await deleteHighlightFromStorage(lastHighlight.id);
+  } catch (err) {
+    console.warn("Aura Highlighter: Failed to undo last highlight.", err);
+  }
+}
+
 // Initialize floating menu action handlers
 initFloatingMenu(
   async (range, color, existingId = null) => {
@@ -87,28 +132,7 @@ initFloatingMenu(
         await chrome.storage.local.set({ [url]: pageHighlights });
       }
     } else if (range) {
-      // Create new highlight
-      const id = 'aura_' + Math.random().toString(36).substr(2, 9);
-      const parentBlock = getClosestBlockParent(range.startContainer);
-      const selector = getUniqueSelector(parentBlock);
-      const startOffset = getTextOffset(parentBlock, range.startContainer, range.startOffset);
-      const endOffset = getTextOffset(parentBlock, range.endContainer, range.endOffset);
-      
-      if (startOffset !== -1 && endOffset !== -1) {
-        const highlight = {
-          id,
-          selector,
-          startOffset,
-          endOffset,
-          color,
-          text: range.toString(),
-          createdAt: Date.now(),
-          pageTitle: document.title || window.location.hostname,
-          url: window.location.href.split('#')[0]
-        };
-        wrapRangeInMarks(range, id, color);
-        await saveHighlight(highlight);
-      }
+      await createHighlightFromRange(range, color);
     }
     window.getSelection().removeAllRanges();
   },
@@ -140,28 +164,7 @@ document.addEventListener('mouseup', async (e) => {
     // Enforce selection has actual text characters
     if (range.toString().trim().length > 0) {
       if (settingsAutoHighlight) {
-        // Auto highlight with default color
-        const id = 'aura_' + Math.random().toString(36).substr(2, 9);
-        const parentBlock = getClosestBlockParent(range.startContainer);
-        const selector = getUniqueSelector(parentBlock);
-        const startOffset = getTextOffset(parentBlock, range.startContainer, range.startOffset);
-        const endOffset = getTextOffset(parentBlock, range.endContainer, range.endOffset);
-        
-        if (startOffset !== -1 && endOffset !== -1) {
-          const highlight = {
-            id,
-            selector,
-            startOffset,
-            endOffset,
-            color: settingsDefaultColor,
-            text: range.toString(),
-            createdAt: Date.now(),
-            pageTitle: document.title || window.location.hostname,
-            url: window.location.href.split('#')[0]
-          };
-          wrapRangeInMarks(range, id, settingsDefaultColor);
-          await saveHighlight(highlight);
-        }
+        await createHighlightFromRange(range, settingsDefaultColor);
         selection.removeAllRanges();
       } else if (settingsToolbarEnabled) {
         showFloatingMenu(range);
@@ -173,11 +176,42 @@ document.addEventListener('mouseup', async (e) => {
   hideFloatingMenu();
 });
 
-// Hide floating menu on escape key
-document.addEventListener('keydown', (e) => {
+// Keyboard shortcuts coordinator
+document.addEventListener('keydown', async (e) => {
+  // Hide floating menu on escape key
   if (e.key === 'Escape') {
     hideFloatingMenu();
     window.getSelection().removeAllRanges();
+    return;
+  }
+
+  // Guard against form inputs
+  if (e.target.tagName === 'INPUT' || 
+      e.target.tagName === 'TEXTAREA' || 
+      e.target.isContentEditable) {
+    return;
+  }
+
+  // Cmd+Z (Mac) or Ctrl+Z (Windows) to undo highlight
+  const isUndo = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z';
+  if (isUndo) {
+    e.preventDefault();
+    await undoLastHighlight();
+    return;
+  }
+
+  // 'h' (or 'H') to highlight active selection
+  if (e.key.toLowerCase() === 'h' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) {
+      const range = selection.getRangeAt(0);
+      if (range.toString().trim().length > 0) {
+        e.preventDefault();
+        await createHighlightFromRange(range, settingsDefaultColor);
+        window.getSelection().removeAllRanges();
+        hideFloatingMenu();
+      }
+    }
   }
 });
 
@@ -187,27 +221,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const selection = window.getSelection();
     if (selection && !selection.isCollapsed) {
       const range = selection.getRangeAt(0);
-      const id = 'aura_' + Math.random().toString(36).substr(2, 9);
-      const parentBlock = getClosestBlockParent(range.startContainer);
-      const selector = getUniqueSelector(parentBlock);
-      const startOffset = getTextOffset(parentBlock, range.startContainer, range.startOffset);
-      const endOffset = getTextOffset(parentBlock, range.endContainer, range.endOffset);
-      
-      if (startOffset !== -1 && endOffset !== -1) {
-        const highlight = {
-          id,
-          selector,
-          startOffset,
-          endOffset,
-          color: msg.color || "indigo",
-          text: range.toString(),
-          createdAt: Date.now(),
-          pageTitle: document.title || window.location.hostname,
-          url: window.location.href.split('#')[0]
-        };
-        wrapRangeInMarks(range, id, msg.color || "indigo");
-        saveHighlight(highlight);
-      }
+      createHighlightFromRange(range, msg.color || "indigo");
       selection.removeAllRanges();
     }
   } else if (msg.action === "scroll-to") {
