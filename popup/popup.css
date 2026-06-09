@@ -658,3 +658,18 @@ body {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.delete-domain-btn {
+  margin-right: 2px;
+}
+
+.delete-domain-btn:hover {
+  color: var(--danger) !important;
+  background: hsla(5, 80%, 10%, 0.8) !important;
+  border-color: var(--danger) !important;
+  box-shadow: 0 4px 10px hsla(5,80%,55%,0.2) !important;
+}
+
+.danger-zone {
+  border-color: hsla(5, 80%, 55%, 0.2) !important;
+}

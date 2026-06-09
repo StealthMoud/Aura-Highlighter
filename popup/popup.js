@@ -86,6 +86,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  // Clear Vault Reset
+  const clearVaultBtn = document.getElementById('clear-vault-btn');
+  clearVaultBtn.addEventListener('click', async () => {
+    if (confirm("Are you sure you want to permanently delete ALL highlights across all domains? This cannot be undone.")) {
+      const allData = await chrome.storage.local.get(null);
+      const keysToRemove = Object.keys(allData).filter(key => !key.startsWith('settings_'));
+      
+      try {
+        const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        if (activeTab && activeTab.id) {
+          keysToRemove.forEach(urlKey => {
+            if (activeTab.url && activeTab.url.split('#')[0] === urlKey.split('#')[0]) {
+              chrome.tabs.sendMessage(activeTab.id, { action: "clear-page-highlights" });
+            }
+          });
+        }
+      } catch (e) {}
+
+      await chrome.storage.local.remove(keysToRemove);
+      await loadAndRender();
+      
+      // Auto toggle back to list view
+      settingsToggleBtn.click();
+    }
+  });
+
   // Helper to resolve domains
   function extractHostname(urlStr) {
     try {
@@ -161,6 +187,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="domain-controls">
             <span class="domain-badge">${groupHighlights.length}</span>
+            <button class="icon-btn delete-domain-btn" title="Delete all highlights on ${domain}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
             <svg class="domain-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
@@ -172,6 +203,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       const headerEl = domainCard.querySelector('.domain-header');
       headerEl.addEventListener('click', () => {
         domainCard.classList.toggle('expanded');
+      });
+
+      const deleteDomainBtn = domainCard.querySelector('.delete-domain-btn');
+      deleteDomainBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm(`Are you sure you want to delete all highlights on ${domain}?`)) {
+          const allData = await chrome.storage.local.get(null);
+          const urlsToRemove = Object.keys(allData).filter(key => {
+            if (key.startsWith('settings_')) return false;
+            try {
+              const hostname = new URL(key).hostname.replace('www.', '');
+              return hostname === domain;
+            } catch (err) {
+              return false;
+            }
+          });
+
+          try {
+            const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            if (activeTab && activeTab.id && activeTab.url) {
+              const activeUrl = activeTab.url.split('#')[0];
+              if (urlsToRemove.includes(activeUrl)) {
+                chrome.tabs.sendMessage(activeTab.id, { action: "clear-page-highlights" });
+              }
+            }
+          } catch (err) {}
+
+          await chrome.storage.local.remove(urlsToRemove);
+          await loadAndRender();
+        }
       });
 
       const bodyEl = domainCard.querySelector('.domain-body');

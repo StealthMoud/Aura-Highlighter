@@ -235,6 +235,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.action === "delete-highlight") {
     removeHighlightFromDOM(msg.id);
     deleteHighlightFromStorage(msg.id);
+  } else if (msg.action === "clear-page-highlights") {
+    const marks = document.querySelectorAll('.aura-highlight-span');
+    marks.forEach(mark => {
+      const parent = mark.parentNode;
+      if (parent) {
+        while (mark.firstChild) {
+          parent.insertBefore(mark.firstChild, mark);
+        }
+        parent.removeChild(mark);
+        parent.normalize();
+      }
+    });
   }
   sendResponse({ status: "ok" });
 });
