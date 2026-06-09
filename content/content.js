@@ -224,7 +224,7 @@ document.addEventListener('keydown', async (e) => {
       }
     }
   }
-});
+}, true);
 
 // Listener for messages from popup & background service worker
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
