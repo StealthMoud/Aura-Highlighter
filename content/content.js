@@ -3,6 +3,7 @@
 
 let settingsToolbarEnabled = true;
 let settingsAutoHighlight = false;
+let settingsShortcutsEnabled = true;
 let settingsDefaultColor = 'indigo';
 
 // Load initial configuration
@@ -10,6 +11,7 @@ async function loadConfig() {
   const config = await chrome.storage.local.get([
     'settings_toolbar_enabled',
     'settings_auto_highlight',
+    'settings_shortcuts_enabled',
     'settings_default_color'
   ]);
   
@@ -18,6 +20,9 @@ async function loadConfig() {
   }
   if (config.hasOwnProperty('settings_auto_highlight')) {
     settingsAutoHighlight = config.settings_auto_highlight;
+  }
+  if (config.hasOwnProperty('settings_shortcuts_enabled')) {
+    settingsShortcutsEnabled = config.settings_shortcuts_enabled;
   }
   if (config.hasOwnProperty('settings_default_color')) {
     settingsDefaultColor = config.settings_default_color;
@@ -31,6 +36,9 @@ chrome.storage.onChanged.addListener((changes) => {
   }
   if (changes.settings_auto_highlight) {
     settingsAutoHighlight = changes.settings_auto_highlight.newValue;
+  }
+  if (changes.settings_shortcuts_enabled) {
+    settingsShortcutsEnabled = changes.settings_shortcuts_enabled.newValue;
   }
   if (changes.settings_default_color) {
     settingsDefaultColor = changes.settings_default_color.newValue;
@@ -184,6 +192,9 @@ document.addEventListener('keydown', async (e) => {
     window.getSelection().removeAllRanges();
     return;
   }
+
+  // Guard: if shortcuts are disabled, bypass
+  if (!settingsShortcutsEnabled) return;
 
   // Guard against form inputs
   if (e.target.tagName === 'INPUT' || 

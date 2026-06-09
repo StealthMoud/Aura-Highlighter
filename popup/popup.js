@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const settingsView = document.getElementById('settings-view');
   const toggleToolbar = document.getElementById('toggle-toolbar');
   const toggleAutoHighlight = document.getElementById('toggle-autohighlight');
+  const toggleShortcuts = document.getElementById('toggle-shortcuts');
   const colorChoiceBtns = document.querySelectorAll('.color-choice-btn');
 
   // Toggle View Panels
@@ -49,15 +50,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const {
       settings_toolbar_enabled = true,
       settings_auto_highlight = false,
+      settings_shortcuts_enabled = true,
       settings_default_color = 'indigo'
     } = await chrome.storage.local.get([
       'settings_toolbar_enabled',
       'settings_auto_highlight',
+      'settings_shortcuts_enabled',
       'settings_default_color'
     ]);
 
     toggleToolbar.checked = settings_toolbar_enabled;
     toggleAutoHighlight.checked = settings_auto_highlight;
+    toggleShortcuts.checked = settings_shortcuts_enabled;
 
     colorChoiceBtns.forEach(btn => {
       if (btn.getAttribute('data-color') === settings_default_color) {
@@ -75,6 +79,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   toggleAutoHighlight.addEventListener('change', async () => {
     await chrome.storage.local.set({ settings_auto_highlight: toggleAutoHighlight.checked });
+  });
+
+  toggleShortcuts.addEventListener('change', async () => {
+    await chrome.storage.local.set({ settings_shortcuts_enabled: toggleShortcuts.checked });
   });
 
   colorChoiceBtns.forEach(btn => {
