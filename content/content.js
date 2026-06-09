@@ -5,6 +5,7 @@ let settingsToolbarEnabled = true;
 let settingsAutoHighlight = false;
 let settingsShortcutsEnabled = true;
 let settingsDefaultColor = 'indigo';
+const redoStack = [];
 
 // Load initial configuration
 async function loadConfig() {
@@ -79,6 +80,9 @@ window.addEventListener('hashchange', checkAndScrollToHash);
 
 // Helper to create and save a new highlight from a Range object
 async function createHighlightFromRange(range, color) {
+  // Clear redo stack on new highlight action
+  redoStack.length = 0;
+
   const id = 'aura_' + Math.random().toString(36).substr(2, 9);
   const parentBlock = getClosestBlockParent(range.startContainer);
   const selector = getUniqueSelector(parentBlock);
@@ -115,10 +119,38 @@ async function undoLastHighlight() {
     pageHighlights.sort((a, b) => b.createdAt - a.createdAt);
     const lastHighlight = pageHighlights[0];
     
+    // Save to redo stack before deleting
+    redoStack.push(lastHighlight);
+    
     removeHighlightFromDOM(lastHighlight.id);
     await deleteHighlightFromStorage(lastHighlight.id);
   } catch (err) {
     console.warn("Aura Highlighter: Failed to undo last highlight.", err);
+  }
+}
+
+// Helper to restore the last undone highlight sequentially
+async function redoLastHighlight() {
+  if (redoStack.length === 0) return;
+  
+  const highlight = redoStack.pop();
+  try {
+    const parent = document.querySelector(highlight.selector);
+    if (!parent) return;
+    
+    const startNodeInfo = getNodeAndOffset(parent, highlight.startOffset);
+    const endNodeInfo = getNodeAndOffset(parent, highlight.endOffset);
+    
+    if (startNodeInfo && endNodeInfo) {
+      const range = document.createRange();
+      range.setStart(startNodeInfo.node, startNodeInfo.offset);
+      range.setEnd(endNodeInfo.node, endNodeInfo.offset);
+      
+      wrapRangeInMarks(range, highlight.id, highlight.color);
+      await saveHighlight(highlight);
+    }
+  } catch (err) {
+    console.warn("Aura Highlighter: Failed to redo highlight.", err);
   }
 }
 
@@ -203,8 +235,17 @@ document.addEventListener('keydown', async (e) => {
     return;
   }
 
+  // Cmd+Shift+Z or Ctrl+Shift+Z or Cmd+Y or Ctrl+Y to redo highlight
+  const isRedo = ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'z') ||
+                 ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'y');
+  if (isRedo) {
+    e.preventDefault();
+    await redoLastHighlight();
+    return;
+  }
+
   // Cmd+Z (Mac) or Ctrl+Z (Windows) to undo highlight
-  const isUndo = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z';
+  const isUndo = (e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z';
   if (isUndo) {
     e.preventDefault();
     await undoLastHighlight();
