@@ -1,0 +1,133 @@
+/* Styles for Aura Highlighter content script injections */
+
+:root {
+  --aura-indigo: hsla(245, 80%, 62%, 0.35);
+  --aura-cyan: hsla(180, 80%, 50%, 0.3);
+  --aura-green: hsla(145, 80%, 45%, 0.3);
+  --aura-amber: hsla(35, 80%, 55%, 0.35);
+
+  --aura-spring-curve: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Highlighted ranges styling */
+.aura-highlight-span {
+  border-radius: 3px;
+  padding: 1px 0;
+  cursor: pointer;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.aura-hl-indigo { background-color: var(--aura-indigo); }
+.aura-hl-cyan   { background-color: var(--aura-cyan); }
+.aura-hl-green  { background-color: var(--aura-green); }
+.aura-hl-amber  { background-color: var(--aura-amber); }
+
+.aura-highlight-span:hover {
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+}
+.aura-hl-indigo:hover { background-color: hsla(245, 80%, 62%, 0.45); }
+.aura-hl-cyan:hover   { background-color: hsla(180, 80%, 50%, 0.4); }
+.aura-hl-green:hover  { background-color: hsla(145, 80%, 45%, 0.4); }
+.aura-hl-amber:hover  { background-color: hsla(35, 80%, 55%, 0.45); }
+
+/* Eye-catching pulse animation for scrolling to highlights */
+.aura-pulse {
+  animation: aura-pulse-kf 1.5s var(--aura-spring-curve);
+}
+
+@keyframes aura-pulse-kf {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 hsla(245, 80%, 62%, 0.6); }
+  50% { transform: scale(1.03); box-shadow: 0 0 10px 8px hsla(245, 80%, 62%, 0.4); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+/* Floating selector menu overlay */
+.aura-floating-menu {
+  position: absolute;
+  z-index: 2147483647; /* Ensure floating menu sits on top of all page elements */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: hsla(245, 15%, 10%, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsla(245, 10%, 25%, 0.35);
+  border-radius: 9999px;
+  box-shadow: 0 10px 30px hsla(245, 80%, 62%, 0.15), inset 0 0 15px hsla(0, 0%, 100%, 0.02);
+  
+  opacity: 0;
+  transform: scale(0.8) translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.3s var(--aura-spring-curve), transform 0.3s var(--aura-spring-curve);
+}
+
+.aura-floating-menu.aura-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+/* Icons and buttons */
+.aura-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: hsl(245, 10%, 75%);
+  transition: all 0.3s var(--aura-spring-curve);
+}
+
+.aura-menu-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s var(--aura-spring-curve);
+}
+
+.aura-menu-btn:hover {
+  transform: translateY(-3px) scale(1.15);
+}
+
+.aura-menu-btn:hover svg {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.aura-menu-btn:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Color dot adjustments */
+.aura-color-dot svg {
+  width: 22px;
+  height: 22px;
+}
+
+.aura-color-dot:hover svg {
+  transform: scale(1.2);
+}
+
+/* Custom trash button highlight colors */
+.aura-trash-btn {
+  color: hsl(5, 80%, 55%);
+}
+
+.aura-trash-btn:hover {
+  background: hsla(5, 80%, 55%, 0.15);
+  box-shadow: 0 0 8px hsla(5, 80%, 55%, 0.2);
+}
+
+.aura-trash-btn:hover svg {
+  transform: scale(1.1) rotate(-10deg);
+}
+
+.aura-menu-divider {
+  width: 1px;
+  height: 16px;
+  background-color: hsla(0, 0%, 100%, 0.15);
+}
