@@ -93,23 +93,35 @@ function removeHighlightFromDOM(id) {
  * Saves a highlight metadata to storage.
  */
 async function saveHighlight(highlight) {
-  const url = window.location.href.split('#')[0];
-  const { [url]: pageHighlights = [] } = await chrome.storage.local.get(url);
-  pageHighlights.push(highlight);
-  await chrome.storage.local.set({ [url]: pageHighlights });
+  try {
+    const url = window.location.href.split('#')[0];
+    const { [url]: pageHighlights = [] } = await chrome.storage.local.get(url);
+    pageHighlights.push(highlight);
+    await chrome.storage.local.set({ [url]: pageHighlights });
+  } catch (err) {
+    if (err.message.includes("Extension context invalidated")) {
+      console.warn("Aura Highlighter: Extension context was invalidated. Please refresh the page to continue highlighting.");
+    } else {
+      console.error("Failed to save highlight:", err);
+    }
+  }
 }
 
 /**
  * Deletes a highlight from storage.
  */
 async function deleteHighlightFromStorage(id) {
-  const url = window.location.href.split('#')[0];
-  const { [url]: pageHighlights = [] } = await chrome.storage.local.get(url);
-  const updated = pageHighlights.filter(h => h.id !== id);
-  if (updated.length > 0) {
-    await chrome.storage.local.set({ [url]: updated });
-  } else {
-    await chrome.storage.local.remove(url);
+  try {
+    const url = window.location.href.split('#')[0];
+    const { [url]: pageHighlights = [] } = await chrome.storage.local.get(url);
+    const updated = pageHighlights.filter(h => h.id !== id);
+    if (updated.length > 0) {
+      await chrome.storage.local.set({ [url]: updated });
+    } else {
+      await chrome.storage.local.remove(url);
+    }
+  } catch (err) {
+    console.warn("Aura Highlighter: Failed to delete highlight from storage.", err);
   }
 }
 
@@ -117,26 +129,30 @@ async function deleteHighlightFromStorage(id) {
  * Restores highlights for the current page on load.
  */
 async function restorePageHighlights() {
-  const url = window.location.href.split('#')[0];
-  const { [url]: pageHighlights = [] } = await chrome.storage.local.get(url);
-  
-  pageHighlights.forEach(h => {
-    try {
-      const parent = document.querySelector(h.selector);
-      if (!parent) return;
-      
-      const startNodeInfo = getNodeAndOffset(parent, h.startOffset);
-      const endNodeInfo = getNodeAndOffset(parent, h.endOffset);
-      
-      if (startNodeInfo && endNodeInfo) {
-        const range = document.createRange();
-        range.setStart(startNodeInfo.node, startNodeInfo.offset);
-        range.setEnd(endNodeInfo.node, endNodeInfo.offset);
+  try {
+    const url = window.location.href.split('#')[0];
+    const { [url]: pageHighlights = [] } = await chrome.storage.local.get(url);
+    
+    pageHighlights.forEach(h => {
+      try {
+        const parent = document.querySelector(h.selector);
+        if (!parent) return;
         
-        wrapRangeInMarks(range, h.id, h.color);
+        const startNodeInfo = getNodeAndOffset(parent, h.startOffset);
+        const endNodeInfo = getNodeAndOffset(parent, h.endOffset);
+        
+        if (startNodeInfo && endNodeInfo) {
+          const range = document.createRange();
+          range.setStart(startNodeInfo.node, startNodeInfo.offset);
+          range.setEnd(endNodeInfo.node, endNodeInfo.offset);
+          
+          wrapRangeInMarks(range, h.id, h.color);
+        }
+      } catch (err) {
+        console.warn("Failed to restore highlight", h.id, err);
       }
-    } catch (err) {
-      console.warn("Failed to restor highlight", h.id, err);
-    }
-  });
+    });
+  } catch (err) {
+    console.warn("Aura Highlighter: Failed to restore highlights.", err);
+  }
 }

@@ -2,10 +2,15 @@
 // Interacts with local storage, active tab scripts, and clipboard
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || !tab.url) return;
+  let tab = null;
+  try {
+    const [t] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    tab = t;
+  } catch (e) {
+    console.warn("Failed to query active tab:", e);
+  }
   
-  const url = tab.url.split('#')[0];
+  const url = (tab && tab.url) ? tab.url.split('#')[0] : '';
   let highlights = [];
 
   // DOM references
@@ -207,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Scroll action
         card.querySelector('.jump-btn').addEventListener('click', async () => {
-          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
           if (!activeTab) return;
 
           const activeUrl = activeTab.url.split('#')[0];
@@ -241,8 +246,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             await chrome.storage.local.remove(targetUrl);
           }
 
-          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-          if (activeTab && activeTab.url.split('#')[0] === targetUrl) {
+          const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+          if (activeTab && activeTab.url && activeTab.url.split('#')[0] === targetUrl) {
             chrome.tabs.sendMessage(activeTab.id, { action: "delete-highlight", id: h.id });
           }
           
