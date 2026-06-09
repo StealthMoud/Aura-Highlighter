@@ -89,16 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Save settings on changes
   toggleToolbar.addEventListener('change', async () => {
-    const toolbarEnabled = toggleToolbar.checked;
-    if (toolbarEnabled) {
-      toggleAutoHighlight.checked = false;
-      await chrome.storage.local.set({
-        settings_toolbar_enabled: true,
-        settings_auto_highlight: false
-      });
-    } else {
-      await chrome.storage.local.set({ settings_toolbar_enabled: false });
-    }
+    await chrome.storage.local.set({ settings_toolbar_enabled: toggleToolbar.checked });
   });
 
   toggleAutoHighlight.addEventListener('change', async () => {
