@@ -8,46 +8,111 @@
 </head>
 <body>
   <div class="aura-popup">
-    <!-- Header with statistics -->
+    <!-- Header with statistics and settings toggle -->
     <header class="aura-header">
       <div class="aura-title-row">
         <h1>Aura Highlights</h1>
-        <span id="highlight-count" class="accent-time">0</span>
+        <div class="header-right">
+          <span id="highlight-count" class="accent-time">0</span>
+          <button id="settings-toggle-btn" class="icon-btn header-action-btn" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+        </div>
       </div>
-      <p class="aura-subtitle">Sleek context highlights</p>
+      <p class="aura-subtitle" id="aura-subtitle">Web-wide highlight organizer</p>
     </header>
 
-    <!-- Search input row -->
-    <div class="search-container">
-      <div class="search-wrapper">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input type="text" id="search-input" class="premium-input" placeholder="Search highlights..." autocomplete="off">
+    <!-- Dashboard view -->
+    <div id="dashboard-view" class="view-panel active">
+      <!-- Search input row -->
+      <div class="search-container">
+        <div class="search-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="search-input" class="premium-input" placeholder="Search highlights..." autocomplete="off">
+        </div>
       </div>
+
+      <!-- Active highlights list -->
+      <main class="highlights-container">
+        <div id="empty-state" class="empty-state">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+          </svg>
+          <p>No highlights on this page.</p>
+          <span class="empty-hint">Select any text to highlight it.</span>
+        </div>
+        <div id="highlights-list" class="highlights-list"></div>
+      </main>
+
+      <!-- Controls footer -->
+      <footer class="aura-footer">
+        <button id="clear-all-btn" class="danger-btn" title="Clear all page highlights">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          <span>Clear Page</span>
+        </button>
+      </footer>
     </div>
 
-    <!-- Active highlights list -->
-    <main class="highlights-container">
-      <div id="empty-state" class="empty-state">
-        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-        </svg>
-        <p>No highlights on this page.</p>
-        <span class="empty-hint">Select any text to highlight it.</span>
-      </div>
-      <div id="highlights-list" class="highlights-list"></div>
-    </main>
+    <!-- Settings view -->
+    <div id="settings-view" class="view-panel">
+      <main class="highlights-container">
+        <div class="settings-group">
+          <div class="settings-item">
+            <div class="settings-label-wrapper">
+              <span class="settings-label">Floating Toolbar</span>
+              <span class="settings-desc">Show color dots instantly on selection</span>
+            </div>
+            <label class="premium-switch">
+              <input type="checkbox" id="toggle-toolbar" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
 
-    <!-- Controls footer -->
-    <footer class="aura-footer">
-      <button id="clear-all-btn" class="danger-btn" title="Clear all page highlights">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-        </svg>
-        <span>Clear Page</span>
-      </button>
-    </footer>
+          <div class="settings-item">
+            <div class="settings-label-wrapper">
+              <span class="settings-label">Auto-Highlight</span>
+              <span class="settings-desc">Auto-highlight using default color</span>
+            </div>
+            <label class="premium-switch">
+              <input type="checkbox" id="toggle-autohighlight">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <span class="settings-group-title">Default Highlight Color</span>
+          <div class="color-picker-grid">
+            <button class="color-choice-btn color-indigo active" data-color="indigo" title="Indigo">
+              <span class="color-choice-dot"></span>
+              <span class="color-choice-name">Indigo</span>
+            </button>
+            <button class="color-choice-btn color-cyan" data-color="cyan" title="Cyan">
+              <span class="color-choice-dot"></span>
+              <span class="color-choice-name">Cyan</span>
+            </button>
+            <button class="color-choice-btn color-green" data-color="green" title="Green">
+              <span class="color-choice-dot"></span>
+              <span class="color-choice-name">Green</span>
+            </button>
+            <button class="color-choice-btn color-amber" data-color="amber" title="Amber">
+              <span class="color-choice-dot"></span>
+              <span class="color-choice-name">Amber</span>
+            </button>
+          </div>
+        </div>
+      </main>
+      <footer class="aura-footer">
+        <div style="flex-grow: 1;"></div>
+      </footer>
+    </div>
   </div>
   <script src="popup.js"></script>
 </body>

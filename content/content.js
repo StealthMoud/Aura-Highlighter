@@ -1,12 +1,73 @@
 // Main coordinator script for Aura Highlighter
 // Wire mouse events, selection capture, storage persistence, and popup signals
 
+let settingsToolbarEnabled = true;
+let settingsAutoHighlight = false;
+let settingsDefaultColor = 'indigo';
+
+// Load initial configuration
+async function loadConfig() {
+  const config = await chrome.storage.local.get([
+    'settings_toolbar_enabled',
+    'settings_auto_highlight',
+    'settings_default_color'
+  ]);
+  
+  if (config.hasOwnProperty('settings_toolbar_enabled')) {
+    settingsToolbarEnabled = config.settings_toolbar_enabled;
+  }
+  if (config.hasOwnProperty('settings_auto_highlight')) {
+    settingsAutoHighlight = config.settings_auto_highlight;
+  }
+  if (config.hasOwnProperty('settings_default_color')) {
+    settingsDefaultColor = config.settings_default_color;
+  }
+}
+
+// Reactively align settings changes
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.settings_toolbar_enabled) {
+    settingsToolbarEnabled = changes.settings_toolbar_enabled.newValue;
+  }
+  if (changes.settings_auto_highlight) {
+    settingsAutoHighlight = changes.settings_auto_highlight.newValue;
+  }
+  if (changes.settings_default_color) {
+    settingsDefaultColor = changes.settings_default_color.newValue;
+  }
+});
+
 // Automatically load highlights when injected
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", restorePageHighlights);
+  document.addEventListener("DOMContentLoaded", async () => {
+    await loadConfig();
+    restorePageHighlights();
+    checkAndScrollToHash();
+  });
 } else {
-  restorePageHighlights();
+  (async () => {
+    await loadConfig();
+    restorePageHighlights();
+    checkAndScrollToHash();
+  })();
 }
+
+function checkAndScrollToHash() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#aura-scroll=')) {
+    const targetId = hash.split('=')[1];
+    setTimeout(() => {
+      const mark = document.querySelector(`mark[data-highlight-id="${targetId}"]`);
+      if (mark) {
+        mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        mark.classList.add('aura-pulse');
+        setTimeout(() => mark.classList.remove('aura-pulse'), 1500);
+      }
+    }, 600);
+  }
+}
+
+window.addEventListener('hashchange', checkAndScrollToHash);
 
 // Initialize floating menu action handlers
 initFloatingMenu(
@@ -41,7 +102,9 @@ initFloatingMenu(
           endOffset,
           color,
           text: range.toString(),
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          pageTitle: document.title || window.location.hostname,
+          url: window.location.href.split('#')[0]
         };
         wrapRangeInMarks(range, id, color);
         await saveHighlight(highlight);
@@ -57,7 +120,7 @@ initFloatingMenu(
 );
 
 // Selection detection listener
-document.addEventListener('mouseup', (e) => {
+document.addEventListener('mouseup', async (e) => {
   const selection = window.getSelection();
   
   // Ignore clicks inside the floating menu itself
@@ -76,7 +139,33 @@ document.addEventListener('mouseup', (e) => {
     const range = selection.getRangeAt(0);
     // Enforce selection has actual text characters
     if (range.toString().trim().length > 0) {
-      showFloatingMenu(range);
+      if (settingsAutoHighlight) {
+        // Auto highlight with default color
+        const id = 'aura_' + Math.random().toString(36).substr(2, 9);
+        const parentBlock = getClosestBlockParent(range.startContainer);
+        const selector = getUniqueSelector(parentBlock);
+        const startOffset = getTextOffset(parentBlock, range.startContainer, range.startOffset);
+        const endOffset = getTextOffset(parentBlock, range.endContainer, range.endOffset);
+        
+        if (startOffset !== -1 && endOffset !== -1) {
+          const highlight = {
+            id,
+            selector,
+            startOffset,
+            endOffset,
+            color: settingsDefaultColor,
+            text: range.toString(),
+            createdAt: Date.now(),
+            pageTitle: document.title || window.location.hostname,
+            url: window.location.href.split('#')[0]
+          };
+          wrapRangeInMarks(range, id, settingsDefaultColor);
+          await saveHighlight(highlight);
+        }
+        selection.removeAllRanges();
+      } else if (settingsToolbarEnabled) {
+        showFloatingMenu(range);
+      }
       return;
     }
   }
@@ -112,7 +201,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           endOffset,
           color: msg.color || "indigo",
           text: range.toString(),
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          pageTitle: document.title || window.location.hostname,
+          url: window.location.href.split('#')[0]
         };
         wrapRangeInMarks(range, id, msg.color || "indigo");
         saveHighlight(highlight);
