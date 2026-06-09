@@ -673,3 +673,48 @@ body {
 .danger-zone {
   border-color: hsla(5, 80%, 55%, 0.2) !important;
 }
+
+/* Keyboard Shortcuts styling */
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcut-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shortcut-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.shortcut-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 20px;
+  padding: 0 6px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary-light);
+  background: hsla(245, 80%, 62%, 0.1);
+  border: 1px solid hsla(245, 80%, 62%, 0.25);
+  border-radius: 5px;
+  box-shadow: 0 0 6px var(--primary-glow);
+  text-shadow: 0 0 4px var(--primary-glow);
+}
