@@ -230,6 +230,23 @@
         <div style="flex-grow: 1;"></div>
       </footer>
     </div>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="custom-confirm-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <svg class="modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span class="modal-title">Confirm Action</span>
+      </div>
+      <p id="custom-confirm-message" class="modal-message">Are you sure you want to proceed?</p>
+      <div class="modal-actions">
+        <button id="custom-confirm-cancel" class="modal-btn secondary-btn">Cancel</button>
+        <button id="custom-confirm-ok" class="modal-btn primary-confirm-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
   </div>
   <script src="popup.js"></script>
 </body>

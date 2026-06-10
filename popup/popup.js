@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Clear Vault Reset
   const clearVaultBtn = document.getElementById('clear-vault-btn');
   clearVaultBtn.addEventListener('click', async () => {
-    if (confirm("Are you sure you want to permanently delete ALL highlights across all domains? This cannot be undone.")) {
+    if (await showConfirmModal("Are you sure you want to permanently delete ALL highlights across all domains? This cannot be undone.", true)) {
       const allData = await chrome.storage.local.get(null);
       const keysToRemove = Object.keys(allData).filter(key => !key.startsWith('settings_'));
       
@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const deleteDomainBtn = domainCard.querySelector('.delete-domain-btn');
       deleteDomainBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (confirm(`Are you sure you want to move all highlights on ${domain} to trash?`)) {
+        if (await showConfirmModal(`Are you sure you want to move all highlights on ${domain} to trash?`, false)) {
           const allData = await chrome.storage.local.get(null);
           const urlsToRemove = Object.keys(allData).filter(key => {
             if (key.startsWith('settings_') || key === 'aura_trash') return false;
@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Empty Trash action handler
   emptyTrashBtn.addEventListener('click', async () => {
-    if (confirm("Are you sure you want to permanently empty the Recycle Bin? All trashed highlights will be erased forever.")) {
+    if (await showConfirmModal("Are you sure you want to permanently empty the Recycle Bin? All trashed highlights will be erased forever.", true)) {
       await chrome.storage.local.remove('aura_trash');
       await renderTrashList();
     }
@@ -570,7 +570,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       // Delete Permanently action handler
       card.querySelector('.delete-perm-btn').addEventListener('click', async () => {
-        if (confirm("Are you sure you want to permanently delete this highlight?")) {
+        if (await showConfirmModal("Are you sure you want to permanently delete this highlight?", true)) {
           const currentTrashData = await chrome.storage.local.get('aura_trash');
           const currentTrash = currentTrashData.aura_trash || [];
           const updatedTrash = currentTrash.filter(item => item.id !== h.id);
@@ -603,6 +603,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const days = Math.floor(hrs / 24);
     return `${days}d`;
+  }
+
+  function showConfirmModal(message, isDanger = false) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('custom-confirm-modal');
+      const messageEl = document.getElementById('custom-confirm-message');
+      const okBtn = document.getElementById('custom-confirm-ok');
+      const cancelBtn = document.getElementById('custom-confirm-cancel');
+      
+      messageEl.textContent = message;
+      
+      if (isDanger) {
+        okBtn.className = 'modal-btn danger-confirm-btn';
+        okBtn.textContent = 'Delete';
+      } else {
+        okBtn.className = 'modal-btn primary-confirm-btn';
+        okBtn.textContent = 'Confirm';
+      }
+      
+      modal.classList.add('active');
+      
+      function handleOk() {
+        cleanup();
+        resolve(true);
+      }
+      
+      function handleCancel() {
+        cleanup();
+        resolve(false);
+      }
+      
+      function cleanup() {
+        okBtn.removeEventListener('click', handleOk);
+        cancelBtn.removeEventListener('click', handleCancel);
+        modal.classList.remove('active');
+      }
+      
+      okBtn.addEventListener('click', handleOk);
+      cancelBtn.addEventListener('click', handleCancel);
+    });
   }
 
   // Init
