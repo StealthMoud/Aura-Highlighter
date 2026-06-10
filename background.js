@@ -1,7 +1,28 @@
 // Background service worker for Aura Highlighter
 // Listens for context menu events and sends messages to content scripts
 
+async function cleanupExpiredTrash() {
+  try {
+    const { aura_trash = [] } = await chrome.storage.local.get('aura_trash');
+    if (aura_trash.length === 0) return;
+    
+    const now = Date.now();
+    const thirtyDaysMs = 2592000000; // 30 Days expiration
+    const validTrash = aura_trash.filter(item => {
+      const age = now - (item.deletedAt || 0);
+      return age < thirtyDaysMs;
+    });
+    
+    if (validTrash.length !== aura_trash.length) {
+      await chrome.storage.local.set({ aura_trash: validTrash });
+    }
+  } catch (err) {
+    console.warn("Aura Highlighter: Failed to execute background trash cleanup.", err);
+  }
+}
+
 async function cleanupExpiredHighlights() {
+  await cleanupExpiredTrash();
   try {
     const config = await chrome.storage.local.get([
       'settings_auto_delete_enabled',

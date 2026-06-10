@@ -305,6 +305,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         parent.normalize();
       }
     });
+  } else if (msg.action === "restore-highlight") {
+    const h = msg.highlight;
+    try {
+      const parent = document.querySelector(h.selector);
+      if (parent) {
+        const startNodeInfo = getNodeAndOffset(parent, h.startOffset);
+        const endNodeInfo = getNodeAndOffset(parent, h.endOffset);
+        if (startNodeInfo && endNodeInfo) {
+          const range = document.createRange();
+          range.setStart(startNodeInfo.node, startNodeInfo.offset);
+          range.setEnd(endNodeInfo.node, endNodeInfo.offset);
+          wrapRangeInMarks(range, h.id, h.color);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to restore highlight to DOM:", err);
+    }
   }
   sendResponse({ status: "ok" });
 });

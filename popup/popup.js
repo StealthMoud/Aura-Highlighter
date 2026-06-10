@@ -22,8 +22,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Settings DOM references
   const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+  const trashToggleBtn = document.getElementById('trash-toggle-btn');
   const dashboardView = document.getElementById('dashboard-view');
   const settingsView = document.getElementById('settings-view');
+  const trashView = document.getElementById('trash-view');
+  const trashList = document.getElementById('trash-list');
+  const trashEmptyState = document.getElementById('trash-empty-state');
+  const emptyTrashBtn = document.getElementById('empty-trash-btn');
+
   const toggleToolbar = document.getElementById('toggle-toolbar');
   const toggleAutoHighlight = document.getElementById('toggle-autohighlight');
   const toggleShortcuts = document.getElementById('toggle-shortcuts');
@@ -32,19 +38,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   const autodeleteDurationContainer = document.getElementById('autodelete-duration-container');
   const colorChoiceBtns = document.querySelectorAll('.color-choice-btn');
 
-  // Toggle View Panels
-  settingsToggleBtn.addEventListener('click', () => {
-    const isSettingsActive = settingsView.classList.contains('active');
-    if (isSettingsActive) {
-      settingsView.classList.remove('active');
+  // Unified View Switcher
+  function showView(viewName) {
+    dashboardView.classList.remove('active');
+    settingsView.classList.remove('active');
+    trashView.classList.remove('active');
+    
+    settingsToggleBtn.classList.remove('active');
+    trashToggleBtn.classList.remove('active');
+    
+    if (viewName === 'dashboard') {
       dashboardView.classList.add('active');
-      settingsToggleBtn.classList.remove('active');
       settingsToggleBtn.title = "Settings";
-    } else {
-      dashboardView.classList.remove('active');
+      trashToggleBtn.title = "Recycle Bin";
+      loadAndRender(); // Reload dashboard highlights
+    } else if (viewName === 'settings') {
       settingsView.classList.add('active');
       settingsToggleBtn.classList.add('active');
       settingsToggleBtn.title = "Back to list";
+      trashToggleBtn.title = "Recycle Bin";
+    } else if (viewName === 'trash') {
+      trashView.classList.add('active');
+      trashToggleBtn.classList.add('active');
+      trashToggleBtn.title = "Back to list";
+      settingsToggleBtn.title = "Settings";
+      renderTrashList(); // Render recently deleted items
+    }
+  }
+
+  // Toggle View Panels
+  settingsToggleBtn.addEventListener('click', () => {
+    if (settingsView.classList.contains('active')) {
+      showView('dashboard');
+    } else {
+      showView('settings');
+    }
+  });
+
+  trashToggleBtn.addEventListener('click', () => {
+    if (trashView.classList.contains('active')) {
+      showView('dashboard');
+    } else {
+      showView('trash');
     }
   });
 
@@ -194,7 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allHighlights = [];
     
     Object.keys(allData).forEach(key => {
-      if (!key.startsWith('settings_') && Array.isArray(allData[key])) {
+      if (!key.startsWith('settings_') && key !== 'aura_trash' && Array.isArray(allData[key])) {
         const pageHighlights = allData[key].map(h => ({
           ...h,
           url: h.url || key,
@@ -274,10 +309,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const deleteDomainBtn = domainCard.querySelector('.delete-domain-btn');
       deleteDomainBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (confirm(`Are you sure you want to delete all highlights on ${domain}?`)) {
+        if (confirm(`Are you sure you want to move all highlights on ${domain} to trash?`)) {
           const allData = await chrome.storage.local.get(null);
           const urlsToRemove = Object.keys(allData).filter(key => {
-            if (key.startsWith('settings_')) return false;
+            if (key.startsWith('settings_') || key === 'aura_trash') return false;
             try {
               const hostname = new URL(key).hostname.replace('www.', '');
               return hostname === domain;
@@ -285,6 +320,24 @@ document.addEventListener('DOMContentLoaded', async () => {
               return false;
             }
           });
+
+          // Move deleted highlights to trash list
+          const deletedHighlights = [];
+          urlsToRemove.forEach(urlKey => {
+            if (Array.isArray(allData[urlKey])) {
+              deletedHighlights.push(...allData[urlKey]);
+            }
+          });
+
+          if (deletedHighlights.length > 0) {
+            const { aura_trash = [] } = await chrome.storage.local.get('aura_trash');
+            const now = Date.now();
+            deletedHighlights.forEach(item => {
+              item.deletedAt = now;
+              aura_trash.push(item);
+            });
+            await chrome.storage.local.set({ aura_trash });
+          }
 
           try {
             const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -365,12 +418,20 @@ document.addEventListener('DOMContentLoaded', async () => {
           const targetUrl = h.url.split('#')[0];
           const pageHighlightsData = await chrome.storage.local.get(targetUrl);
           const pageHighlights = pageHighlightsData[targetUrl] || [];
+          const target = pageHighlights.find(item => item.id === h.id);
           const updated = pageHighlights.filter(item => item.id !== h.id);
           
           if (updated.length > 0) {
             await chrome.storage.local.set({ [targetUrl]: updated });
           } else {
             await chrome.storage.local.remove(targetUrl);
+          }
+
+          if (target) {
+            const { aura_trash = [] } = await chrome.storage.local.get('aura_trash');
+            target.deletedAt = Date.now();
+            aura_trash.push(target);
+            await chrome.storage.local.set({ aura_trash });
           }
 
           const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -402,6 +463,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Clear all highlights on active page
   clearAllBtn.addEventListener('click', async () => {
     const activeHighlights = highlights.filter(h => h.url.split('#')[0] === url);
+    if (activeHighlights.length > 0) {
+      const { aura_trash = [] } = await chrome.storage.local.get('aura_trash');
+      const now = Date.now();
+      activeHighlights.forEach(h => {
+        h.deletedAt = now;
+        aura_trash.push(h);
+      });
+      await chrome.storage.local.set({ aura_trash });
+    }
     for (const h of activeHighlights) {
       chrome.tabs.sendMessage(tab.id, { action: "delete-highlight", id: h.id });
     }
@@ -416,6 +486,114 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadAndRender();
     }
   });
+
+  // Empty Trash action handler
+  emptyTrashBtn.addEventListener('click', async () => {
+    if (confirm("Are you sure you want to permanently empty the Recycle Bin? All trashed highlights will be erased forever.")) {
+      await chrome.storage.local.remove('aura_trash');
+      await renderTrashList();
+    }
+  });
+
+  async function renderTrashList() {
+    const { aura_trash = [] } = await chrome.storage.local.get('aura_trash');
+    trashList.innerHTML = '';
+    
+    if (aura_trash.length === 0) {
+      trashEmptyState.style.display = 'flex';
+      trashList.style.display = 'none';
+      return;
+    }
+    
+    trashEmptyState.style.display = 'none';
+    trashList.style.display = 'flex';
+    
+    // Sort recently deleted descending
+    aura_trash.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+    
+    aura_trash.forEach(h => {
+      const card = document.createElement('div');
+      card.className = 'highlight-card';
+      card.setAttribute('data-id', h.id);
+      
+      const domain = extractHostname(h.url);
+      const deletedTimeDesc = formatDeletedTime(h.deletedAt);
+      
+      card.innerHTML = `
+        <div class="highlight-header">
+          <span class="color-indicator color-${h.color}"></span>
+          <span class="highlight-time">Deleted ${deletedTimeDesc}</span>
+        </div>
+        <div class="highlight-page-title" title="${escapeHtml(h.pageTitle)}">${escapeHtml(h.pageTitle)} (${domain})</div>
+        <div class="highlight-body" title="${escapeHtml(h.text)}">${escapeHtml(h.text)}</div>
+        <div class="card-actions">
+          <button class="icon-btn restore-btn" title="Restore highlight">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+            </svg>
+          </button>
+          <button class="icon-btn delete-btn delete-perm-btn" title="Delete permanently">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      `;
+      
+      // Restore action handler
+      card.querySelector('.restore-btn').addEventListener('click', async () => {
+        const currentTrashData = await chrome.storage.local.get('aura_trash');
+        const currentTrash = currentTrashData.aura_trash || [];
+        const targetHighlight = currentTrash.find(item => item.id === h.id);
+        const updatedTrash = currentTrash.filter(item => item.id !== h.id);
+        await chrome.storage.local.set({ aura_trash: updatedTrash });
+        
+        if (targetHighlight) {
+          const targetUrl = targetHighlight.url.split('#')[0];
+          const pageData = await chrome.storage.local.get(targetUrl);
+          const pageHighlights = pageData[targetUrl] || [];
+          
+          delete targetHighlight.deletedAt;
+          pageHighlights.push(targetHighlight);
+          await chrome.storage.local.set({ [targetUrl]: pageHighlights });
+          
+          try {
+            const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            if (activeTab && activeTab.url && activeTab.url.split('#')[0] === targetUrl) {
+              chrome.tabs.sendMessage(activeTab.id, { action: "restore-highlight", highlight: targetHighlight });
+            }
+          } catch (e) {}
+        }
+        
+        await renderTrashList();
+      });
+      
+      // Delete Permanently action handler
+      card.querySelector('.delete-perm-btn').addEventListener('click', async () => {
+        if (confirm("Are you sure you want to permanently delete this highlight?")) {
+          const currentTrashData = await chrome.storage.local.get('aura_trash');
+          const currentTrash = currentTrashData.aura_trash || [];
+          const updatedTrash = currentTrash.filter(item => item.id !== h.id);
+          await chrome.storage.local.set({ aura_trash: updatedTrash });
+          await renderTrashList();
+        }
+      });
+      
+      trashList.appendChild(card);
+    });
+  }
+
+  function formatDeletedTime(timestamp) {
+    if (!timestamp) return 'recently';
+    const diff = Date.now() - timestamp;
+    if (diff < 60000) return 'just now';
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  }
 
   // Init
   try {

@@ -114,11 +114,19 @@ async function deleteHighlightFromStorage(id) {
   try {
     const url = window.location.href.split('#')[0];
     const { [url]: pageHighlights = [] } = await chrome.storage.local.get(url);
+    const target = pageHighlights.find(h => h.id === id);
     const updated = pageHighlights.filter(h => h.id !== id);
     if (updated.length > 0) {
       await chrome.storage.local.set({ [url]: updated });
     } else {
       await chrome.storage.local.remove(url);
+    }
+
+    if (target) {
+      const { aura_trash = [] } = await chrome.storage.local.get('aura_trash');
+      target.deletedAt = Date.now();
+      aura_trash.push(target);
+      await chrome.storage.local.set({ aura_trash });
     }
   } catch (err) {
     console.warn("Aura Highlighter: Failed to delete highlight from storage.", err);
