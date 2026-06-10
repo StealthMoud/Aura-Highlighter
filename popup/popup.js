@@ -517,12 +517,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.setAttribute('data-id', h.id);
       
       const domain = extractHostname(h.url);
-      const deletedTimeDesc = formatDeletedTime(h.deletedAt);
+      const remainingTimeDesc = formatDeletedTime(h.deletedAt);
       
       card.innerHTML = `
         <div class="highlight-header">
           <span class="color-indicator color-${h.color}"></span>
-          <span class="highlight-time">Deleted ${deletedTimeDesc}</span>
+          <span class="highlight-time">Deletes in ${remainingTimeDesc}</span>
         </div>
         <div class="highlight-page-title" title="${escapeHtml(h.pageTitle)}">${escapeHtml(h.pageTitle)} (${domain})</div>
         <div class="highlight-body" title="${escapeHtml(h.text)}">${escapeHtml(h.text)}</div>
@@ -584,15 +584,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function formatDeletedTime(timestamp) {
-    if (!timestamp) return 'recently';
-    const diff = Date.now() - timestamp;
-    if (diff < 60000) return 'just now';
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
+    if (!timestamp) return '30d';
+    const thirtyDaysMs = 2592000000;
+    const elapsed = Date.now() - timestamp;
+    const remainingMs = thirtyDaysMs - elapsed;
+    
+    if (remainingMs <= 0) return '0m';
+    
+    const mins = Math.floor(remainingMs / 60000);
+    if (mins < 60) {
+      return `${mins}m`;
+    }
+    
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
+    if (hrs < 24) {
+      return `${hrs}h`;
+    }
+    
     const days = Math.floor(hrs / 24);
-    return `${days}d ago`;
+    return `${days}d`;
   }
 
   // Init
